@@ -1,0 +1,105 @@
+import requests
+from bs4 import BeautifulSoup
+import os
+import time
+
+# 设置请求头，模拟浏览器访问
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+def search_music(keyword):
+    """搜索音乐并返回搜索结果列表"""
+    search_url = f'https://music.example.com/search?keyword={keyword}'  # 替换为实际的搜索URL
+    try:
+        response = requests.get(search_url, headers=headers)
+        response.raise_for_status()  # 检查请求是否成功
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 解析搜索结果，这里需要根据实际网站结构进行调整
+        music_list = []
+        for item in soup.select('.music-item'):  # 替换为实际的音乐项选择器
+            title = item.select_one('.title').text.strip()
+            artist = item.select_one('.artist').text.strip()
+            music_id = item['data-id']  # 替换为实际的音乐ID属性
+            music_list.append({
+                'title': title,
+                'artist': artist,
+                'id': music_id
+            })
+        return music_list
+    except Exception as e:
+        print(f"搜索音乐时出错: {e}")
+        return []
+
+def get_music_url(music_id):
+    """获取音乐的下载链接"""
+    detail_url = f'https://music.example.com/detail?id={music_id}'  # 替换为实际的详情页URL
+    try:
+        response = requests.get(detail_url, headers=headers)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # 提取音乐下载链接，这里需要根据实际网站结构进行调整
+        music_url = soup.select_one('#download-link')['href']  # 替换为实际的下载链接选择器
+        return music_url
+    except Exception as e:
+        print(f"获取音乐链接时出错: {e}")
+        return None
+
+def download_music(url, filename, save_dir='./music'):
+    """下载音乐文件"""
+    # 创建保存目录
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    save_path = os.path.join(save_dir, filename)
+    try:
+        print(f"开始下载: {filename}")
+        response = requests.get(url, headers=headers, stream=True)
+        response.raise_for_status()
+        
+        with open(save_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"下载完成: {save_path}")
+        return True
+    except Exception as e:
+        print(f"下载音乐时出错: {e}")
+        return False
+
+def main():
+    """主函数"""
+    keyword = input("请输入要搜索的音乐关键词: ")
+    music_list = search_music(keyword)
+    
+    if not music_list:
+        print("未找到相关音乐")
+        return
+    
+    print("\n搜索结果:")
+    for i, music in enumerate(music_list, 1):
+        print(f"{i}. {music['title']} - {music['artist']}")
+    
+OBOBOB    try:
+        choice = int(input("\n请选择要下载的音乐编号 (输入0退出): "))
+        if 0 < choice <= len(music_list):
+            selected = music_list[choice - 1]
+            music_url = get_music_url(selected['id'])
+            
+            if music_url:
+                # 构建文件名
+                filename = f"{selected['title']} - {selected['artist']}.mp3"
+                # 处理文件名中的非法字符
+OBOBOB                filename = "".join([c for c in filename if c not in r'\/:*?"<>|'])
+                
+                download_music(music_url, filename)
+            else:
+                print("无法获取音乐下载链接")
+        else:
+            print("已取消下载")
+    except ValueError:
+        print("输入无效，请输入数字")
+OBOBOB
+if __name__ == "__main__":
+    main()    
